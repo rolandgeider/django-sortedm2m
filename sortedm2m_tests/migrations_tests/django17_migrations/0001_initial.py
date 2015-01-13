@@ -41,4 +41,10 @@ class Migration(migrations.Migration):
             field=sortedm2m.fields.SortedManyToManyField(to='migrations_tests.Photo'),
             preserve_default=True,
         ),
+        migrations.AddField(
+            model_name='gallery',
+            name='photos3',
+            field=models.ManyToManyField(to='migrations_tests.Photo'),
+            preserve_default=True,
+        ),
     ]

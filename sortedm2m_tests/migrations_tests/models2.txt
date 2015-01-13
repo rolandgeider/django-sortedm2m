@@ -18,7 +18,7 @@ class Gallery(models.Model):
     name = models.CharField(max_length=50)
     photos = SortedManyToManyField(Photo)
     photos2 = SortedManyToManyField(Photo, related_name='gallery2+')
-    photos3 = models.ManyToManyField(Photo, related_name='gallery3+')
+    photos3 = SortedManyToManyField(Photo, related_name='gallery3+')
 
     class Meta:
         verbose_name = _('Photo')

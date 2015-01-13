@@ -43,6 +43,10 @@ class TestMigrations(TestCase):
         sys.stdout = StringIO()
         self.orig_stdout = sys.stdout
 
+        self.migrations_path = os.path.join(os.path.dirname(__file__),
+                                            'migrations_tests',
+                                            'django17_migrations')
+
         # Roll back all migrations to be sure what we test against.
         call_command('migrate', 'migrations_tests', 'zero')
         call_command('migrate', 'migrations_tests', '0001')
@@ -51,18 +55,59 @@ class TestMigrations(TestCase):
         sys.stdout = self.orig_stdout
 
         # Remove created migrations.
-        migrations_path = os.path.join(
-            os.path.dirname(__file__),
-            'migrations_tests',
-            'django17_migrations')
-        if os.path.exists(migrations_path):
-            for filename in os.listdir(migrations_path):
-                if filename not in ('__init__.py', '0001_initial.py'):
-                    filepath = os.path.join(migrations_path, filename)
+        if os.path.exists(self.migrations_path):
+            for filename in os.listdir(self.migrations_path):
+                if filename not in ('__init__.py',
+                                    '0001_initial.py',
+                                    '0002_data_migration.txt'):
+                    filepath = os.path.join(self.migrations_path, filename)
                     if os.path.isdir(filepath):
                         shutil.rmtree(filepath)
                     else:
                         os.remove(filepath)
+
+    def test_data_migration(self):
+        '''Test the AlterSortedManyToManyField operation'''
+
+        p1 = Photo.objects.create(name='A')
+        p1.save()
+        p2 = Photo.objects.create(name='C')
+        p2.save()
+        p3 = Photo.objects.create(name='B')
+        p3.save()
+        p4 = Photo.objects.create(name='D')
+        p4.save()
+        p5 = Photo.objects.create(name='E')
+        p5.save()
+
+        gallery = Gallery.objects.create(name='Gallery')
+        gallery.photos3 = [p3, p1, p2]
+        gallery.save()
+
+        self.assertEqual(gallery.photos3.count(), 3)
+
+        # Simulate updating the model
+        models_path = os.path.join(os.path.dirname(__file__), 'migrations_tests')
+        shutil.copy(os.path.join(models_path, 'models.py'),
+                    os.path.join(models_path, 'models.py.bak'))
+
+        shutil.copy(os.path.join(models_path, 'models2.txt'),
+                    os.path.join(models_path, 'models.py'))
+
+        shutil.copy(os.path.join(self.migrations_path, '0002_data_migration.txt'),
+                    os.path.join(self.migrations_path, '0002_data_migration.py'))
+        call_command('makemigrations', 'migrations_tests')
+
+        #shutil.move(os.path.join(models_path, 'models.py.bak'),
+        #            os.path.join(models_path, 'models.py'))
+        call_command('migrate')
+
+        # TODO: test data order after migration
+        gallery.photos3.add(p4)
+        gallery.photos3.add(p5)
+
+        shutil.move(os.path.join(models_path, 'models.py.bak'),
+                    os.path.join(models_path, 'models.py'))
 
     def test_defined_migration(self):
         photo = Photo.objects.create(name='Photo')
